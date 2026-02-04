@@ -27,14 +27,17 @@ export const initGoogleDrive = (clientId: string, apiKey: string, onInitComplete
       } catch (err: any) {
         console.error("GAPI Init Error:", err);
         const rawError = err.result?.error?.message || JSON.stringify(err);
+        const errorString = JSON.stringify(err);
         
         let friendlyError = `Lỗi khởi tạo API Key: ${rawError}`;
 
         // Dịch lỗi phổ biến sang tiếng Việt
         if (rawError.includes("Google Drive API has not been used") || rawError.includes("is disabled")) {
-            friendlyError = "LỖI CHƯA BẬT DỊCH VỤ:\nBạn chưa bật 'Google Drive API' trong Google Cloud Console.\n\nHướng dẫn: Vào mục 'Library' (Thư viện) trên Cloud Console > Tìm 'Google Drive API' > Nhấn nút 'ENABLE' (Bật).";
+            friendlyError = "LỖI CHƯA BẬT DỊCH VỤ (API NOT ENABLED):\nBạn chưa bật 'Google Drive API' trong Google Cloud Console.\n\nHướng dẫn: Vào mục 'Library' (Thư viện) trên Cloud Console > Tìm 'Google Drive API' > Nhấn nút 'ENABLE' (Bật).";
         } else if (rawError.includes("The request is missing a valid API key")) {
              friendlyError = "Lỗi: API Key không hợp lệ hoặc bị thiếu.";
+        } else if (rawError.includes("Requests from referer") && rawError.includes("are blocked") || errorString.includes("API_KEY_HTTP_REFERRER_BLOCKED")) {
+             friendlyError = "LỖI CHẶN TÊN MIỀN (REFERRER BLOCKED):\nAPI Key của bạn đang giới hạn trang web được phép truy cập nhưng thiếu trang này.\n\nHướng dẫn: Vào Google Cloud Console > Credentials > Chọn API Key > Mục 'Website restrictions' > Thêm dòng: 'https://qlcpmf.netlify.app/*' vào danh sách.\n(Lưu ý: Sau khi Lưu cần đợi 5 phút).";
         }
 
         onInitComplete(false, friendlyError);

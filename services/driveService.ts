@@ -1,6 +1,6 @@
 // Service to handle Google Drive Interactions
 
-const FOLDER_NAME = 'FinanceFlow_Data';
+const FOLDER_NAME = 'QLCP';
 const DATA_FILE_NAME = 'finance_data.json';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 

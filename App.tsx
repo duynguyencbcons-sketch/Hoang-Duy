@@ -123,8 +123,10 @@ const App: React.FC = () => {
             alert("LỖI CẤU HÌNH (Origin Mismatch):\nHãy vào Google Cloud Console > Credentials > OAuth 2.0 Client ID.\nTại mục 'Authorized JavaScript origins', thêm link web này vào (không có dấu / ở cuối).");
         } else if (e.error === 'popup_closed_by_user') {
             // User closed popup, do nothing
+        } else if (e.error === 'access_denied') {
+             alert("TỪ CHỐI TRUY CẬP (Access Denied):\nCó thể bạn chưa thêm email vào danh sách 'Test Users' trên Google Cloud.\nHãy xem hướng dẫn trong phần Cài đặt.");
         } else {
-            alert("Đăng nhập thất bại. Nếu thấy lỗi 'redirect_uri_mismatch', hãy kiểm tra mục Cài đặt > Hướng dẫn sửa lỗi.");
+            alert("Đăng nhập thất bại. Nếu thấy lỗi 'redirect_uri_mismatch' hoặc 'access_denied', hãy kiểm tra mục Cài đặt > Hướng dẫn sửa lỗi.");
         }
     }
   };
@@ -447,6 +449,25 @@ const App: React.FC = () => {
                                   <ul className="list-disc pl-4 space-y-1">
                                       <li>Chọn <b>API Key</b> của bạn trong Credentials.</li>
                                       <li>Mục <b>Website restrictions</b>: Thêm <code>https://qlcpmf.netlify.app/*</code></li>
+                                  </ul>
+                              </div>
+                              <div className="border-t border-amber-200 pt-2 space-y-1 text-amber-900">
+                                  <p><b>Lỗi 3: Access blocked / App not verified</b></p>
+                                  <ul className="list-disc pl-4 space-y-1">
+                                      <li>Do ứng dụng đang ở chế độ <b>Testing</b>.</li>
+                                      <li>Vào <b>OAuth Consent Screen</b> &gt; Mục <b>Test users</b>.</li>
+                                      <li>Nhấn <b>Add Users</b> và thêm email Gmail của bạn vào danh sách.</li>
+                                      <li>Lưu lại và thử đăng nhập lại.</li>
+                                  </ul>
+                              </div>
+                              <div className="border-t border-amber-200 pt-2 space-y-1 text-amber-900">
+                                  <p><b>Lỗi 4: Something went wrong (Màn hình đen)</b></p>
+                                  <ul className="list-disc pl-4 space-y-1">
+                                      <li>Đây là lỗi chung của Google. Thường do thiếu thông tin trong <b>OAuth Consent Screen</b>.</li>
+                                      <li>Vào Google Cloud Console &gt; OAuth Consent Screen.</li>
+                                      <li>Đảm bảo đã điền <b>User support email</b> và <b>Developer contact information</b>.</li>
+                                      <li>Nhấn <b>Save and Continue</b> đến hết các bước.</li>
+                                      <li>Thử lại bằng <b>Tab ẩn danh (Incognito)</b> để tránh lỗi cache trình duyệt.</li>
                                   </ul>
                               </div>
                           </div>

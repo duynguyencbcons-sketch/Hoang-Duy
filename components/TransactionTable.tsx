@@ -11,6 +11,19 @@ interface Props {
   selectedYear: string;
 }
 
+// Duplicate Color Logic to ensure consistency with Dashboard without refactoring into new file
+const CATEGORY_COLORS: Record<string, string> = {
+  'Vật tư': '#3b82f6', // Blue
+  'Cơ giới': '#10b981', // Emerald/Green
+  'Nhân công': '#f59e0b', // Amber/Orange
+  'Chi phí công trường': '#ef4444', // Red
+  'Chi phí khác': '#8b5cf6', // Violet
+  'Thu từ ứng tiền': '#06b6d4', // Cyan
+  'Thu thanh lý': '#84cc16', // Lime
+  'Thu khác': '#64748b' // Slate
+};
+const DEFAULT_COLOR = '#94a3b8';
+
 const TransactionTable: React.FC<Props> = ({ transactions, onViewImage, onEdit, selectedMonth, selectedYear }) => {
   
   // Filter Data
@@ -158,13 +171,13 @@ const TransactionTable: React.FC<Props> = ({ transactions, onViewImage, onEdit, 
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-slate-600">{tx.date}</td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{tx.merchant}</td>
+                  {/* Updated Merchant styling to match Description */}
+                  <td className="px-4 py-3 max-w-xs truncate text-slate-600" title={tx.merchant}>{tx.merchant}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${
-                      tx.type === 'INCOME' 
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                        : 'bg-slate-100 text-slate-700 border-slate-200'
-                    }`}>
+                    <span 
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border border-transparent text-white"
+                      style={{ backgroundColor: CATEGORY_COLORS[tx.category] || DEFAULT_COLOR }}
+                    >
                       {tx.category}
                     </span>
                   </td>

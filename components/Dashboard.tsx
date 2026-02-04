@@ -14,7 +14,23 @@ interface Props {
   onViewImage: (url: string) => void;
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'];
+// 1. Define Standard Colors for Categories (WBS)
+const CATEGORY_COLORS: Record<string, string> = {
+  'Vật tư': '#3b82f6', // Blue
+  'Cơ giới': '#10b981', // Emerald/Green
+  'Nhân công': '#f59e0b', // Amber/Orange
+  'Chi phí công trường': '#ef4444', // Red
+  'Chi phí khác': '#8b5cf6', // Violet
+  'Thu từ ứng tiền': '#06b6d4', // Cyan
+  'Thu thanh lý': '#84cc16', // Lime
+  'Thu khác': '#64748b' // Slate
+};
+
+const DEFAULT_COLOR = '#94a3b8'; // Slate 400
+
+const getCategoryColor = (category: string) => {
+  return CATEGORY_COLORS[category] || DEFAULT_COLOR;
+};
 
 const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, selectedYear, onViewImage }) => {
   
@@ -68,7 +84,7 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
       const percent = (data.value / totalBudget) * 100;
       return (
         <div className="bg-white p-2 border border-slate-200 shadow-md rounded text-sm">
-          <p className="font-semibold text-slate-800">{data.name}</p>
+          <p className="font-semibold text-slate-800" style={{ color: getCategoryColor(data.name) }}>{data.name}</p>
           <p className="text-slate-600">
              Giá trị: {formatCurrency(data.value)} ({percent.toFixed(1)}%)
           </p>
@@ -96,7 +112,8 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
       spent: spent,
       remaining: remaining,
       isOverBudget: spent > b.amount,
-      percent: percent.toFixed(1)
+      percent: percent.toFixed(1),
+      fillColor: getCategoryColor(b.category) // Use the mapped color for the 'Spent' bar
     };
   });
 
@@ -170,7 +187,7 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
                   labelLine={false}
                 >
                   {budgetPieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name)} />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
@@ -180,7 +197,7 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
                     align="right"
                     formatter={(value, entry: any) => {
                         const { payload } = entry;
-                        return <span className="text-xs text-slate-600">{value}</span>;
+                        return <span className="text-xs text-slate-600 font-medium">{value}</span>;
                     }} 
                 />
               </PieChart>
@@ -202,7 +219,8 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
                     formatter={(value, name) => [formatCurrency(Number(value)), name === 'spent' ? 'Đã chi' : 'Còn lại']}
                   />
                   <Legend />
-                  <Bar dataKey="spent" name="Đã chi" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} barSize={24}>
+                  {/* Bar for SPENT - Use mapped category color */}
+                  <Bar dataKey="spent" name="Đã chi" stackId="a" radius={[0, 0, 0, 0]} barSize={24}>
                      <LabelList 
                         dataKey="spent" 
                         position="insideLeft" 
@@ -211,10 +229,11 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
                         formatter={(val: number) => val > 0 ? formatCurrency(val) : ''} 
                      />
                      {barChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.isOverBudget ? '#ef4444' : '#10b981'} />
+                        <Cell key={`cell-spent-${index}`} fill={entry.fillColor} />
                      ))}
                   </Bar>
-                  <Bar dataKey="remaining" name="Còn lại" stackId="a" fill="#e2e8f0" radius={[0, 4, 4, 0]} barSize={24}>
+                  {/* Bar for REMAINING - Light Yellow (#fde047 is yellow-300) */}
+                  <Bar dataKey="remaining" name="Còn lại" stackId="a" fill="#fde047" radius={[0, 4, 4, 0]} barSize={24}>
                      <LabelList 
                         dataKey="remaining" 
                         position="right" 
@@ -262,9 +281,15 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
                        </span>
                     </td>
                     <td className="px-3 py-3 text-slate-500 whitespace-nowrap text-xs">{tx.date}</td>
-                    <td className="px-3 py-3 text-slate-800 font-medium">{tx.merchant}</td>
+                    {/* Updated styling for Merchant to match Description */}
+                    <td className="px-3 py-3 text-slate-500 text-xs truncate max-w-[150px]" title={tx.merchant}>{tx.merchant}</td>
                     <td className="px-3 py-3">
-                       <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs border border-slate-200 whitespace-nowrap">{tx.category}</span>
+                       <span 
+                          className="px-2 py-0.5 rounded text-xs border border-white text-white whitespace-nowrap"
+                          style={{ backgroundColor: getCategoryColor(tx.category) }}
+                       >
+                         {tx.category}
+                       </span>
                     </td>
                     <td className="px-3 py-3 text-slate-500 text-xs truncate max-w-[150px]" title={tx.description}>{tx.description}</td>
                     <td className="px-3 py-3 text-right font-mono font-bold text-red-600 whitespace-nowrap">
@@ -317,9 +342,15 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
                        </span>
                     </td>
                     <td className="px-3 py-3 text-slate-500 whitespace-nowrap text-xs">{tx.date}</td>
-                    <td className="px-3 py-3 text-slate-800 font-medium">{tx.merchant}</td>
+                    {/* Updated styling for Merchant to match Description */}
+                    <td className="px-3 py-3 text-slate-500 text-xs truncate max-w-[150px]" title={tx.merchant}>{tx.merchant}</td>
                     <td className="px-3 py-3">
-                       <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-xs border border-emerald-100 whitespace-nowrap">{tx.category}</span>
+                       <span 
+                          className="px-2 py-0.5 rounded text-xs border border-white text-white whitespace-nowrap"
+                          style={{ backgroundColor: getCategoryColor(tx.category) }}
+                       >
+                         {tx.category}
+                       </span>
                     </td>
                     <td className="px-3 py-3 text-slate-500 text-xs truncate max-w-[150px]" title={tx.description}>{tx.description}</td>
                     <td className="px-3 py-3 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">

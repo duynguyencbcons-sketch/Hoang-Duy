@@ -139,7 +139,7 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
                 <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white"
+                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-slate-900"
                 >
                     {type === 'EXPENSE' ? (
                         // Load dynamic budgets from App state
@@ -167,7 +167,7 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
                     placeholder="VD: Nhà cung cấp sắt thép A"
                     value={merchant}
                     onChange={(e) => setMerchant(e.target.value)}
-                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-slate-900 placeholder:text-slate-400"
                 />
             </div>
         </div>
@@ -184,7 +184,7 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-slate-900"
                 />
             </div>
 
@@ -201,7 +201,7 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
                     placeholder="VD: 5000"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono text-lg"
+                    className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 font-mono text-lg bg-white text-slate-900 placeholder:text-slate-400"
                 />
             </div>
         </div>
@@ -218,7 +218,7 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
                 placeholder="VD: Thanh toán tiền ăn trưa với chủ đầu tư..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 resize-none"
+                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 resize-none bg-white text-slate-900 placeholder:text-slate-400"
             />
         </div>
 
@@ -232,14 +232,14 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
             {!previewUrl ? (
                 <div 
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors"
+                    className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors bg-white"
                 >
                     <Upload className="w-8 h-8 text-slate-400 mb-2" />
                     <span className="text-sm text-slate-500">Nhấn để tải ảnh lên</span>
                 </div>
             ) : (
                 <div className="relative inline-block">
-                    <img src={previewUrl} alt="Preview" className="h-40 rounded-lg border border-slate-200 object-cover" />
+                    <img src={previewUrl} alt="Preview" className="h-40 rounded-lg border border-slate-200 object-cover bg-white" />
                     <button
                         type="button"
                         onClick={removeFile}

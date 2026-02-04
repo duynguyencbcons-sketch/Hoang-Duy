@@ -47,6 +47,11 @@ const App: React.FC = () => {
   const [editPasswordInput, setEditPasswordInput] = useState('');
   const [editAuthError, setEditAuthError] = useState(false);
 
+  // Settings Auth State
+  const [showSettingsSecurity, setShowSettingsSecurity] = useState(false);
+  const [settingsPasswordInput, setSettingsPasswordInput] = useState('');
+  const [settingsAuthError, setSettingsAuthError] = useState(false);
+
   // Budget Category State (Dynamic)
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryAmount, setNewCategoryAmount] = useState('');
@@ -215,6 +220,21 @@ const App: React.FC = () => {
      }
   };
 
+  const handleOpenSettings = () => {
+      setSettingsPasswordInput('');
+      setSettingsAuthError(false);
+      setShowSettingsSecurity(true);
+  };
+
+  const checkSettingsPassword = () => {
+      if (settingsPasswordInput === 'Hoangduy1997') {
+          setShowSettingsSecurity(false);
+          setShowProjectModal(true);
+      } else {
+          setSettingsAuthError(true);
+      }
+  };
+
   const handleUpdateBudget = (category: string, amount: number) => {
     const newBudgets = budgets.map(b => b.category === category ? { ...b, amount } : b);
     setBudgets(newBudgets);
@@ -305,7 +325,7 @@ const App: React.FC = () => {
                  <select 
                    value={selectedMonth} 
                    onChange={(e) => setSelectedMonth(e.target.value)}
-                   className="text-sm border-slate-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500 border px-2 py-1"
+                   className="text-sm border-slate-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500 border px-2 py-1 bg-white text-slate-900"
                  >
                    <option value="all">Cả năm</option>
                    {Array.from({length: 12}, (_, i) => i + 1).map(m => (
@@ -316,7 +336,7 @@ const App: React.FC = () => {
                  <select 
                    value={selectedYear} 
                    onChange={(e) => setSelectedYear(e.target.value)}
-                   className="text-sm border-slate-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500 border px-2 py-1"
+                   className="text-sm border-slate-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500 border px-2 py-1 bg-white text-slate-900"
                  >
                    {yearOptions.map(year => (
                      <option key={year} value={year.toString()}>{year}</option>
@@ -346,7 +366,7 @@ const App: React.FC = () => {
                  </button>
 
                  <button 
-                   onClick={() => setShowProjectModal(true)}
+                   onClick={handleOpenSettings}
                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors border border-slate-300"
                  >
                     <Settings className="w-4 h-4" />
@@ -418,6 +438,40 @@ const App: React.FC = () => {
                   />
                </div>
             </div>
+         </div>
+      )}
+
+      {/* Settings Security Modal */}
+      {showSettingsSecurity && (
+         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+             <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+                <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
+                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                       <Lock className="w-5 h-5" />
+                       Bảo Mật Cài Đặt
+                    </h3>
+                    <button onClick={() => setShowSettingsSecurity(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+                </div>
+                <div className="p-6">
+                    <p className="text-sm text-slate-600 mb-4">Vui lòng nhập mật khẩu quản trị để thay đổi cấu hình dự án.</p>
+                    <input 
+                        type="password" 
+                        value={settingsPasswordInput}
+                        onChange={(e) => setSettingsPasswordInput(e.target.value)}
+                        placeholder="Nhập mật khẩu..."
+                        autoFocus
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        onKeyDown={(e) => e.key === 'Enter' && checkSettingsPassword()}
+                     />
+                     {settingsAuthError && <p className="text-red-500 text-sm mb-4">Mật khẩu không đúng</p>}
+                     <button 
+                        onClick={checkSettingsPassword}
+                        className="w-full bg-slate-800 text-white py-2 rounded-lg hover:bg-slate-900 transition-colors font-medium"
+                     >
+                        Xác Nhận
+                     </button>
+                </div>
+             </div>
          </div>
       )}
 

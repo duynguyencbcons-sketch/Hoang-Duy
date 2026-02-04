@@ -4,7 +4,7 @@ import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ReceiptUploader from './components/ReceiptUploader';
 import { AppView, Transaction, Budget } from './types';
-import { Settings, Filter, Plus, Lock, AlertTriangle, Building2, Save, Cloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Settings, Filter, Plus, Lock, AlertTriangle, Building2, Save, Cloud, Loader2, CheckCircle2, AlertCircle, HelpCircle, ExternalLink } from 'lucide-react';
 import * as driveService from './services/driveService';
 
 const App: React.FC = () => {
@@ -34,6 +34,7 @@ const App: React.FC = () => {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showUploaderModal, setShowUploaderModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [showTroubleshoot, setShowTroubleshoot] = useState(false); // New state for troubleshooting toggle
 
   // Budget Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -119,11 +120,11 @@ const App: React.FC = () => {
     } catch (e: any) {
         console.error(e);
         if (e.error === 'origin_mismatch') {
-            alert("LỖI: Tên miền web chưa được cho phép!\nHãy vào Google Cloud Console > Credentials > Client ID > Authorized JavaScript origins và thêm địa chỉ web này vào.");
+            alert("LỖI CẤU HÌNH (Origin Mismatch):\nHãy vào Google Cloud Console > Credentials > OAuth 2.0 Client ID.\nTại mục 'Authorized JavaScript origins', thêm link web này vào (không có dấu / ở cuối).");
         } else if (e.error === 'popup_closed_by_user') {
             // User closed popup, do nothing
         } else {
-            alert("Đăng nhập thất bại: " + JSON.stringify(e));
+            alert("Đăng nhập thất bại. Nếu thấy lỗi 'redirect_uri_mismatch', hãy kiểm tra mục Cài đặt > Hướng dẫn sửa lỗi.");
         }
     }
   };
@@ -390,7 +391,7 @@ const App: React.FC = () => {
       {/* Project Settings Modal */}
       {showProjectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
                <div className="p-4 border-b flex justify-between items-center bg-slate-50">
                   <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
                      <Settings className="w-5 h-5 text-slate-600" />
@@ -411,16 +412,51 @@ const App: React.FC = () => {
                   </div>
                   
                   <div className="pt-4 border-t border-slate-100">
-                      <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                          <Cloud className="w-4 h-4 text-blue-600" />
-                          Cấu hình Google Drive
-                      </h4>
+                      <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                              <Cloud className="w-4 h-4 text-blue-600" />
+                              Cấu hình Google Drive
+                          </h4>
+                          <button 
+                            onClick={() => setShowTroubleshoot(!showTroubleshoot)}
+                            className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                             <HelpCircle className="w-3 h-3" />
+                             Hướng dẫn sửa lỗi
+                          </button>
+                      </div>
+
+                      {showTroubleshoot && (
+                          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg mb-4 text-xs space-y-2">
+                              <h5 className="font-bold text-amber-800 flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Khắc phục lỗi Kết Nối
+                              </h5>
+                              <div className="space-y-1 text-amber-900">
+                                  <p><b>Lỗi 1: Access blocked / redirect_uri_mismatch</b></p>
+                                  <ul className="list-disc pl-4 space-y-1">
+                                      <li>Vào <a href="https://console.cloud.google.com/apis/credentials" target="_blank" className="underline text-blue-600">Google Cloud Console &gt; Credentials</a></li>
+                                      <li>Chọn <b>OAuth 2.0 Client ID</b> của bạn.</li>
+                                      <li>Mục <b>Authorized JavaScript origins</b>: Thêm <code>https://qlcpmf.netlify.app</code> (Không có dấu / ở cuối).</li>
+                                      <li>Mục <b>Authorized redirect URIs</b>: Thêm <code>https://qlcpmf.netlify.app</code></li>
+                                      <li>Lưu và chờ 5 phút.</li>
+                                  </ul>
+                              </div>
+                              <div className="border-t border-amber-200 pt-2 space-y-1 text-amber-900">
+                                  <p><b>Lỗi 2: API_KEY_HTTP_REFERRER_BLOCKED</b></p>
+                                  <ul className="list-disc pl-4 space-y-1">
+                                      <li>Chọn <b>API Key</b> của bạn trong Credentials.</li>
+                                      <li>Mục <b>Website restrictions</b>: Thêm <code>https://qlcpmf.netlify.app/*</code></li>
+                                  </ul>
+                              </div>
+                          </div>
+                      )}
                       
                       <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-3">
                           <div className="flex items-start gap-2">
                               <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                               <p className="text-xs text-blue-700">
-                                  <b>Lưu ý quan trọng:</b> Nếu bạn deploy lên Netlify, hãy thêm link trang web (không có dấu / ở cuối) vào mục <b>"Authorized JavaScript origins"</b> trong Google Cloud Console.
+                                  Để kết nối hoạt động, bạn cần điền đúng <b>Client ID</b> và <b>API Key</b> từ Google Cloud Platform.
                               </p>
                           </div>
                       </div>

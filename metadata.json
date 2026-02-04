@@ -1,0 +1,8 @@
+{
+  "name": "FinanceFlow AI",
+  "description": "Ứng dụng quản lý thu chi tự động sử dụng AI để xử lý hóa đơn, tổng hợp vào bảng tính và trợ lý ảo thông minh.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

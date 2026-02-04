@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Upload, Calendar, DollarSign, FileText, Tag, Image as ImageIcon, X, User } from 'lucide-react';
+import { Send, Upload, Calendar, DollarSign, FileText, Tag, Image as ImageIcon, X, User, KeyRound } from 'lucide-react';
 import { Transaction, TransactionType, ConstructionCategory, Budget } from '../types';
 
 interface Props {
   onTransactionAdded: (tx: Transaction, file?: File | null) => void;
   budgets: Budget[]; // Passed to generate dropdown options
   initialData?: Transaction | null; // For editing
+  requiredPassword?: string; // New prop for validation
 }
 
-const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initialData }) => {
+const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initialData, requiredPassword }) => {
   // Form States
   const [type, setType] = useState<TransactionType>('EXPENSE');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -16,6 +17,7 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState<string>('');
   const [merchant, setMerchant] = useState(''); 
+  const [password, setPassword] = useState(''); // State for input password
   
   // File Upload State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -71,6 +73,12 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
         return;
     }
 
+    // Password Validation Logic
+    if (requiredPassword && password !== requiredPassword) {
+        alert("Mật khẩu xác thực không chính xác! Vui lòng nhập lại.");
+        return;
+    }
+
     const newTransaction: Transaction = {
       id: initialData ? initialData.id : Date.now().toString(),
       date: date, // YYYY-MM-DD
@@ -90,6 +98,7 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
        setDescription('');
        setAmount('');
        setMerchant('');
+       setPassword(''); // Clear password
        removeFile();
     }
   };
@@ -258,8 +267,23 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
             />
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Button & Password Protection */}
         <div className="pt-2">
+            <div className="mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-yellow-600" />
+                    Xác nhận mật khẩu
+                </label>
+                <input
+                    type="password"
+                    required
+                    placeholder="Nhập mật khẩu..."
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white text-slate-900"
+                />
+            </div>
+            
             <button
                 type="submit"
                 className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-bold py-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-lg"

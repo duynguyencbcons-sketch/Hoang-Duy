@@ -4,7 +4,7 @@ import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ReceiptUploader from './components/ReceiptUploader';
 import { AppView, Transaction, Budget } from './types';
-import { Settings, Filter, Plus, Lock, AlertTriangle, Building2, Save, Cloud, Loader2, CheckCircle2, AlertCircle, HelpCircle, ExternalLink } from 'lucide-react';
+import { Settings, Filter, Plus, Lock, AlertTriangle, Building2, Save, Cloud, Loader2, CheckCircle2, AlertCircle, HelpCircle, ExternalLink, KeyRound } from 'lucide-react';
 import * as driveService from './services/driveService';
 
 const App: React.FC = () => {
@@ -13,6 +13,9 @@ const App: React.FC = () => {
   // Project Info State - Initialize from localStorage or default
   const [projectName, setProjectName] = useState(() => localStorage.getItem('project_name') || 'SiteCost AI');
   
+  // Transaction Password State - Default 'Hoangduy1997'
+  const [transactionPwd, setTransactionPwd] = useState(() => localStorage.getItem('transaction_password') || 'Hoangduy1997');
+
   // Google Drive Config State
   const [googleClientId, setGoogleClientId] = useState('');
   const [googleApiKey, setGoogleApiKey] = useState('');
@@ -270,6 +273,8 @@ const App: React.FC = () => {
   const saveSettings = () => {
       // Save Project Name
       localStorage.setItem('project_name', projectName);
+      // Save Transaction Password
+      localStorage.setItem('transaction_password', transactionPwd);
       // Save Google Keys
       localStorage.setItem('google_client_id', googleClientId);
       localStorage.setItem('google_api_key', googleApiKey);
@@ -439,6 +444,7 @@ const App: React.FC = () => {
                     onTransactionAdded={handleSaveTransaction} 
                     budgets={budgets}
                     initialData={editingTransaction}
+                    requiredPassword={transactionPwd}
                   />
                </div>
             </div>
@@ -500,6 +506,21 @@ const App: React.FC = () => {
                         placeholder="VD: Mingfai Ph2 factory"
                         className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
+                  </div>
+
+                  <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-1">
+                        <KeyRound className="w-4 h-4 text-slate-500" />
+                        Mật khẩu khi Thêm/Sửa
+                     </label>
+                     <input 
+                         type="text" 
+                         value={transactionPwd}
+                         onChange={(e) => setTransactionPwd(e.target.value)}
+                         placeholder="Nhập mật khẩu xác thực..."
+                         className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                     />
+                     <p className="text-xs text-slate-500 mt-1">Mật khẩu này sẽ được yêu cầu khi thêm mới hoặc chỉnh sửa giao dịch.</p>
                   </div>
                   
                   <div className="pt-4 border-t border-slate-100">

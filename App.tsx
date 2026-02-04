@@ -261,7 +261,29 @@ const App: React.FC = () => {
       });
   };
 
+  // Image Viewer Logic
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
+  const [loadingImage, setLoadingImage] = useState(false);
+
+  useEffect(() => {
+     if (viewingImage) {
+         // Check if it's a blob or data (local) -> show immediately
+         if (viewingImage.startsWith('blob:') || viewingImage.startsWith('data:')) {
+             setDisplayImageUrl(viewingImage);
+             setLoadingImage(false);
+         } else {
+             // Try to fetch from Drive
+             setLoadingImage(true);
+             driveService.fetchDriveImage(viewingImage).then((url) => {
+                 setDisplayImageUrl(url || viewingImage); // Fallback to original if fetch fails
+                 setLoadingImage(false);
+             });
+         }
+     } else {
+         setDisplayImageUrl(null);
+     }
+  }, [viewingImage]);
 
   // Generate Year Options (Current Year +/- 1)
   const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
@@ -659,11 +681,25 @@ const App: React.FC = () => {
       {/* Image Viewer */}
       {viewingImage && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4" onClick={() => setViewingImage(null)}>
-          <div className="relative max-w-5xl max-h-full">
-            <img src={viewingImage} alt="Receipt" className="max-w-full max-h-[90vh] rounded-lg" />
+          <div className="relative max-w-5xl max-h-full flex items-center justify-center">
+            {loadingImage ? (
+                <div className="text-white flex flex-col items-center">
+                    <Loader2 className="w-10 h-10 animate-spin mb-2" />
+                    <p>Đang tải ảnh từ Drive...</p>
+                </div>
+            ) : displayImageUrl ? (
+                <img src={displayImageUrl} alt="Receipt" className="max-w-full max-h-[90vh] rounded-lg" />
+            ) : (
+                <div className="text-white flex flex-col items-center p-8 bg-slate-800 rounded-lg">
+                    <AlertTriangle className="w-10 h-10 text-yellow-500 mb-2" />
+                    <p>Không thể hiển thị ảnh.</p>
+                    <p className="text-sm text-slate-400 mt-2">Link có thể bị hỏng hoặc bạn không có quyền truy cập.</p>
+                </div>
+            )}
+            
             <button 
                 onClick={() => setViewingImage(null)}
-                className="absolute -top-10 right-0 text-white hover:text-gray-300 font-bold"
+                className="absolute -top-10 right-0 text-white hover:text-gray-300 font-bold bg-black/50 px-3 py-1 rounded-full"
             >
                 Đóng
             </button>

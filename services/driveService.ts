@@ -206,6 +206,37 @@ export const uploadImageToDrive = async (file: File): Promise<{ webContentLink: 
   };
 };
 
+// Helper to fetch private drive image
+export const fetchDriveImage = async (url: string): Promise<string | null> => {
+    if (!accessToken) return null;
+
+    // Check if url is a Drive URL
+    if (!url.includes('drive.google.com')) return url;
+
+    // Extract File ID
+    // Support: https://drive.google.com/uc?id=... and https://drive.google.com/file/d/...
+    let fileId = '';
+    const matchId = url.match(/id=([^&]+)/);
+    const matchD = url.match(/\/d\/([^/]+)/);
+
+    if (matchId) fileId = matchId[1];
+    else if (matchD) fileId = matchD[1];
+
+    if (!fileId) return url;
+
+    try {
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+            headers: { 'Authorization': 'Bearer ' + accessToken },
+        });
+        if (!response.ok) throw new Error("Failed to fetch image from Drive");
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    } catch (e) {
+        console.error("Error fetching drive image:", e);
+        return null; // Return null on error so UI can show placeholder or error
+    }
+};
+
 // Sync Data JSON
 export const syncDataToDrive = async (transactions: any[], budgets: any[]) => {
   if (!accessToken) return;

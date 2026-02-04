@@ -9,34 +9,49 @@ let gapiInited = false;
 let gisInited = false;
 let accessToken: string | null = null;
 
-export const initGoogleDrive = (clientId: string, apiKey: string, onInitComplete: (success: boolean) => void) => {
+export const initGoogleDrive = (clientId: string, apiKey: string, onInitComplete: (success: boolean, error?: any) => void) => {
   if (!clientId || !apiKey) {
-    console.warn("Missing Google Client ID or API Key");
-    onInitComplete(false);
+    onInitComplete(false, "Chưa nhập Client ID hoặc API Key");
     return;
   }
 
   const gapiLoaded = () => {
     window.gapi.load('client', async () => {
-      await window.gapi.client.init({
-        apiKey: apiKey,
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-      });
-      gapiInited = true;
-      checkInit();
+      try {
+        await window.gapi.client.init({
+          apiKey: apiKey,
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+        });
+        gapiInited = true;
+        checkInit();
+      } catch (err: any) {
+        console.error("GAPI Init Error:", err);
+        // Lỗi thường gặp: API Key sai hoặc bị chặn referer
+        onInitComplete(false, `Lỗi khởi tạo API Key: ${err.result?.error?.message || JSON.stringify(err)}`);
+      }
     });
   };
 
   const gisLoaded = () => {
-    tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: SCOPES,
-      callback: (tokenResponse: any) => {
-        accessToken = tokenResponse.access_token;
-      },
-    });
-    gisInited = true;
-    checkInit();
+    try {
+      tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: SCOPES,
+        callback: (tokenResponse: any) => {
+          if (tokenResponse.error) {
+             console.error("Token Error:", tokenResponse);
+             alert("Lỗi đăng nhập: " + tokenResponse.error);
+             return;
+          }
+          accessToken = tokenResponse.access_token;
+        },
+      });
+      gisInited = true;
+      checkInit();
+    } catch (err: any) {
+       console.error("GIS Init Error:", err);
+       onInitComplete(false, `Lỗi khởi tạo Client ID: ${err.message}`);
+    }
   };
 
   const checkInit = () => {
@@ -46,19 +61,24 @@ export const initGoogleDrive = (clientId: string, apiKey: string, onInitComplete
   };
 
   if (window.gapi) gapiLoaded();
+  else onInitComplete(false, "Không thể tải thư viện GAPI");
+
   if (window.google) gisLoaded();
+  else onInitComplete(false, "Không thể tải thư viện Google Identity");
 };
 
 export const handleAuthClick = () => {
-  return new Promise<boolean>((resolve) => {
+  return new Promise<boolean>((resolve, reject) => {
     if (!tokenClient) {
-        resolve(false);
+        reject("Chưa khởi tạo kết nối Google.");
         return;
     }
     
+    // Override callback to capture success/fail for this specific click
     tokenClient.callback = async (resp: any) => {
       if (resp.error !== undefined) {
-        throw (resp);
+        console.error("Auth Error:", resp);
+        reject(resp);
       }
       accessToken = resp.access_token;
       resolve(true);
@@ -106,7 +126,7 @@ const getFolderId = async (): Promise<string> => {
 
 // Upload Image to Drive
 export const uploadImageToDrive = async (file: File): Promise<{ webContentLink: string, fileId: string }> => {
-  if (!accessToken) throw new Error("Not authenticated");
+  if (!accessToken) throw new Error("Chưa đăng nhập Google Drive");
 
   const folderId = await getFolderId();
 
@@ -127,12 +147,8 @@ export const uploadImageToDrive = async (file: File): Promise<{ webContentLink: 
 
   const data = await response.json();
   
-  // Set permission to anyone with link (optional, depends on privacy needs, keeping it private to user by default)
-  // If you want the image to be viewable in the app tag, it often needs to be proxy-fetched or public.
-  // For this implementation, we will assume the user is viewing it while logged in or using the webContentLink.
-  
   return { 
-      webContentLink: data.webContentLink, // Use this for download/view
+      webContentLink: data.webContentLink, 
       fileId: data.id 
   };
 };
@@ -141,40 +157,44 @@ export const uploadImageToDrive = async (file: File): Promise<{ webContentLink: 
 export const syncDataToDrive = async (transactions: any[], budgets: any[]) => {
   if (!accessToken) return;
 
-  const folderId = await getFolderId();
-  
-  // Check if file exists
-  const listResponse = await window.gapi.client.drive.files.list({
-    q: `name = '${DATA_FILE_NAME}' and '${folderId}' in parents and trashed = false`,
-    fields: 'files(id)',
-  });
-
-  const fileContent = JSON.stringify({ transactions, budgets, lastUpdated: new Date().toISOString() });
-  const blob = new Blob([fileContent], { type: 'application/json' });
-
-  if (listResponse.result.files && listResponse.result.files.length > 0) {
-    // Update existing file
-    const fileId = listResponse.result.files[0].id;
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-        method: 'PATCH',
-        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
-        body: blob,
+  try {
+    const folderId = await getFolderId();
+    
+    // Check if file exists
+    const listResponse = await window.gapi.client.drive.files.list({
+      q: `name = '${DATA_FILE_NAME}' and '${folderId}' in parents and trashed = false`,
+      fields: 'files(id)',
     });
-  } else {
-    // Create new file
-    const metadata = {
-        name: DATA_FILE_NAME,
-        parents: [folderId],
-    };
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', blob);
 
-    await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
-        body: form,
-    });
+    const fileContent = JSON.stringify({ transactions, budgets, lastUpdated: new Date().toISOString() });
+    const blob = new Blob([fileContent], { type: 'application/json' });
+
+    if (listResponse.result.files && listResponse.result.files.length > 0) {
+      // Update existing file
+      const fileId = listResponse.result.files[0].id;
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+          method: 'PATCH',
+          headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+          body: blob,
+      });
+    } else {
+      // Create new file
+      const metadata = {
+          name: DATA_FILE_NAME,
+          parents: [folderId],
+      };
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', blob);
+
+      await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+          method: 'POST',
+          headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+          body: form,
+      });
+    }
+  } catch (e) {
+    console.error("Sync Error:", e);
   }
 };
 

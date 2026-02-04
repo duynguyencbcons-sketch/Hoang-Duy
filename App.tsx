@@ -4,7 +4,7 @@ import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ReceiptUploader from './components/ReceiptUploader';
 import { AppView, Transaction, Budget } from './types';
-import { Settings, Filter, Plus, Lock, AlertTriangle, Building2, Save, Cloud, Loader2, CheckCircle2 } from 'lucide-react';
+import { Settings, Filter, Plus, Lock, AlertTriangle, Building2, Save, Cloud, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import * as driveService from './services/driveService';
 
 const App: React.FC = () => {
@@ -86,8 +86,9 @@ const App: React.FC = () => {
     if (savedApiKey) setGoogleApiKey(savedApiKey);
 
     if (savedClientId && savedApiKey) {
-        driveService.initGoogleDrive(savedClientId, savedApiKey, (success) => {
+        driveService.initGoogleDrive(savedClientId, savedApiKey, (success, error) => {
             setIsDriveReady(success);
+            if (!success && error) console.warn(error);
         });
     }
   }, []);
@@ -95,9 +96,13 @@ const App: React.FC = () => {
   const handleConnectDrive = async () => {
      if (!isDriveReady) {
          // Attempt re-init if keys changed
-         driveService.initGoogleDrive(googleClientId, googleApiKey, (success) => {
+         driveService.initGoogleDrive(googleClientId, googleApiKey, (success, error) => {
              setIsDriveReady(success);
-             if (success) performLogin();
+             if (success) {
+                 performLogin();
+             } else {
+                 alert("Không thể khởi tạo Google API: " + error);
+             }
          });
      } else {
          performLogin();
@@ -111,8 +116,15 @@ const App: React.FC = () => {
         if (success) {
             handleSyncFromDrive();
         }
-    } catch (e) {
-        alert("Đăng nhập thất bại. Kiểm tra Client ID/API Key.");
+    } catch (e: any) {
+        console.error(e);
+        if (e.error === 'origin_mismatch') {
+            alert("LỖI: Tên miền web chưa được cho phép!\nHãy vào Google Cloud Console > Credentials > Client ID > Authorized JavaScript origins và thêm địa chỉ web này vào.");
+        } else if (e.error === 'popup_closed_by_user') {
+            // User closed popup, do nothing
+        } else {
+            alert("Đăng nhập thất bại: " + JSON.stringify(e));
+        }
     }
   };
 
@@ -226,12 +238,15 @@ const App: React.FC = () => {
   const saveSettings = () => {
       localStorage.setItem('google_client_id', googleClientId);
       localStorage.setItem('google_api_key', googleApiKey);
-      driveService.initGoogleDrive(googleClientId, googleApiKey, (success) => {
+      driveService.initGoogleDrive(googleClientId, googleApiKey, (success, error) => {
           setIsDriveReady(success);
-          if (success) alert("Cấu hình Google thành công. Hãy nhấn nút 'Kết nối Drive'.");
-          else alert("Cấu hình không hợp lệ.");
+          if (success) {
+             alert("Cấu hình hợp lệ! Hãy nhấn nút 'Kết nối Drive' trên thanh công cụ.");
+             setShowProjectModal(false);
+          } else {
+             alert("Cấu hình không hợp lệ:\n" + error);
+          }
       });
-      setShowProjectModal(false);
   };
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
@@ -400,10 +415,16 @@ const App: React.FC = () => {
                           <Cloud className="w-4 h-4 text-blue-600" />
                           Cấu hình Google Drive
                       </h4>
-                      <p className="text-xs text-slate-500 mb-3">
-                          Để lưu ảnh và dữ liệu vào Drive cá nhân, bạn cần nhập Client ID và API Key từ Google Cloud Console.
-                      </p>
                       
+                      <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-3">
+                          <div className="flex items-start gap-2">
+                              <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <p className="text-xs text-blue-700">
+                                  <b>Lưu ý quan trọng:</b> Nếu bạn deploy lên Netlify, hãy thêm link trang web (không có dấu / ở cuối) vào mục <b>"Authorized JavaScript origins"</b> trong Google Cloud Console.
+                              </p>
+                          </div>
+                      </div>
+
                       <label className="block text-sm font-medium text-slate-700 mb-1">Google Client ID</label>
                       <input 
                         type="text" 

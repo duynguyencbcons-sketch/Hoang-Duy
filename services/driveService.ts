@@ -26,8 +26,18 @@ export const initGoogleDrive = (clientId: string, apiKey: string, onInitComplete
         checkInit();
       } catch (err: any) {
         console.error("GAPI Init Error:", err);
-        // Lỗi thường gặp: API Key sai hoặc bị chặn referer
-        onInitComplete(false, `Lỗi khởi tạo API Key: ${err.result?.error?.message || JSON.stringify(err)}`);
+        const rawError = err.result?.error?.message || JSON.stringify(err);
+        
+        let friendlyError = `Lỗi khởi tạo API Key: ${rawError}`;
+
+        // Dịch lỗi phổ biến sang tiếng Việt
+        if (rawError.includes("Google Drive API has not been used") || rawError.includes("is disabled")) {
+            friendlyError = "LỖI CHƯA BẬT DỊCH VỤ:\nBạn chưa bật 'Google Drive API' trong Google Cloud Console.\n\nHướng dẫn: Vào mục 'Library' (Thư viện) trên Cloud Console > Tìm 'Google Drive API' > Nhấn nút 'ENABLE' (Bật).";
+        } else if (rawError.includes("The request is missing a valid API key")) {
+             friendlyError = "Lỗi: API Key không hợp lệ hoặc bị thiếu.";
+        }
+
+        onInitComplete(false, friendlyError);
       }
     });
   };

@@ -10,8 +10,8 @@ import * as driveService from './services/driveService';
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   
-  // Project Info State
-  const [projectName, setProjectName] = useState('SiteCost AI');
+  // Project Info State - Initialize from localStorage or default
+  const [projectName, setProjectName] = useState(() => localStorage.getItem('project_name') || 'SiteCost AI');
   
   // Google Drive Config State
   const [googleClientId, setGoogleClientId] = useState('');
@@ -268,8 +268,12 @@ const App: React.FC = () => {
   };
 
   const saveSettings = () => {
+      // Save Project Name
+      localStorage.setItem('project_name', projectName);
+      // Save Google Keys
       localStorage.setItem('google_client_id', googleClientId);
       localStorage.setItem('google_api_key', googleApiKey);
+
       driveService.initGoogleDrive(googleClientId, googleApiKey, (success, error) => {
           setIsDriveReady(success);
           if (success) {

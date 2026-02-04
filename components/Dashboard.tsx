@@ -112,8 +112,7 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
       spent: spent,
       remaining: remaining,
       isOverBudget: spent > b.amount,
-      percent: percent.toFixed(1),
-      fillColor: getCategoryColor(b.category) // Use the mapped color for the 'Spent' bar
+      percent: percent.toFixed(1)
     };
   });
 
@@ -219,8 +218,8 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
                     formatter={(value, name) => [formatCurrency(Number(value)), name === 'spent' ? 'Đã chi' : 'Còn lại']}
                   />
                   <Legend />
-                  {/* Bar for SPENT - Use mapped category color */}
-                  <Bar dataKey="spent" name="Đã chi" stackId="a" radius={[0, 0, 0, 0]} barSize={24}>
+                  {/* Bar for SPENT - Sky Blue (#0ea5e9) */}
+                  <Bar dataKey="spent" name="Đã chi" stackId="a" fill="#0ea5e9" radius={[0, 0, 0, 0]} barSize={24}>
                      <LabelList 
                         dataKey="spent" 
                         position="insideLeft" 
@@ -228,12 +227,9 @@ const Dashboard: React.FC<Props> = ({ transactions, budgets, selectedMonth, sele
                         fontSize={10} 
                         formatter={(val: number) => val > 0 ? formatCurrency(val) : ''} 
                      />
-                     {barChartData.map((entry, index) => (
-                        <Cell key={`cell-spent-${index}`} fill={entry.fillColor} />
-                     ))}
                   </Bar>
-                  {/* Bar for REMAINING - Light Yellow (#fde047 is yellow-300) */}
-                  <Bar dataKey="remaining" name="Còn lại" stackId="a" fill="#fde047" radius={[0, 4, 4, 0]} barSize={24}>
+                  {/* Bar for REMAINING - Orange (#f97316) */}
+                  <Bar dataKey="remaining" name="Còn lại" stackId="a" fill="#f97316" radius={[0, 4, 4, 0]} barSize={24}>
                      <LabelList 
                         dataKey="remaining" 
                         position="right" 

@@ -4,7 +4,8 @@ import Dashboard from './components/Dashboard';
 import TransactionTable from './components/TransactionTable';
 import ReceiptUploader from './components/ReceiptUploader';
 import { AppView, Transaction, Budget } from './types';
-import { Settings, Filter, Plus, Lock, AlertTriangle, Building2, Save } from 'lucide-react';
+import { Settings, Filter, Plus, Lock, AlertTriangle, Building2, Save, Cloud, Loader2, CheckCircle2 } from 'lucide-react';
+import * as driveService from './services/driveService';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
@@ -12,6 +13,13 @@ const App: React.FC = () => {
   // Project Info State
   const [projectName, setProjectName] = useState('SiteCost AI');
   
+  // Google Drive Config State
+  const [googleClientId, setGoogleClientId] = useState('');
+  const [googleApiKey, setGoogleApiKey] = useState('');
+  const [isDriveReady, setIsDriveReady] = useState(false);
+  const [isDriveConnected, setIsDriveConnected] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   // Get current date info
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -70,18 +78,96 @@ const App: React.FC = () => {
     { category: 'Chi phí khác', amount: 1000 },
   ]);
 
-  // Handle saving (Add or Edit)
-  const handleSaveTransaction = (tx: Transaction) => {
-    setTransactions(prev => {
-      const exists = prev.find(t => t.id === tx.id);
-      if (exists) {
-        // Update existing
-        return prev.map(t => t.id === tx.id ? tx : t);
-      } else {
-        // Add new to top
-        return [tx, ...prev];
+  // Load Config from LocalStorage on Mount
+  useEffect(() => {
+    const savedClientId = localStorage.getItem('google_client_id');
+    const savedApiKey = localStorage.getItem('google_api_key');
+    if (savedClientId) setGoogleClientId(savedClientId);
+    if (savedApiKey) setGoogleApiKey(savedApiKey);
+
+    if (savedClientId && savedApiKey) {
+        driveService.initGoogleDrive(savedClientId, savedApiKey, (success) => {
+            setIsDriveReady(success);
+        });
+    }
+  }, []);
+
+  const handleConnectDrive = async () => {
+     if (!isDriveReady) {
+         // Attempt re-init if keys changed
+         driveService.initGoogleDrive(googleClientId, googleApiKey, (success) => {
+             setIsDriveReady(success);
+             if (success) performLogin();
+         });
+     } else {
+         performLogin();
+     }
+  };
+
+  const performLogin = async () => {
+    try {
+        const success = await driveService.handleAuthClick();
+        setIsDriveConnected(success);
+        if (success) {
+            handleSyncFromDrive();
+        }
+    } catch (e) {
+        alert("Đăng nhập thất bại. Kiểm tra Client ID/API Key.");
+    }
+  };
+
+  const handleSyncFromDrive = async () => {
+      setIsSyncing(true);
+      const data = await driveService.loadDataFromDrive();
+      if (data) {
+          if (data.transactions) setTransactions(data.transactions);
+          if (data.budgets) setBudgets(data.budgets);
       }
+      setIsSyncing(false);
+  };
+
+  const saveToDrive = async (txs: Transaction[], bgs: Budget[]) => {
+      if (isDriveConnected) {
+          setIsSyncing(true);
+          await driveService.syncDataToDrive(txs, bgs);
+          setIsSyncing(false);
+      }
+  };
+
+  // Handle saving (Add or Edit)
+  const handleSaveTransaction = async (tx: Transaction, file?: File | null) => {
+    let finalTx = { ...tx };
+
+    // If there is a file and we are connected to Drive, upload it
+    if (file && isDriveConnected) {
+        setIsSyncing(true);
+        try {
+            const result = await driveService.uploadImageToDrive(file);
+            finalTx.receiptUrl = result.webContentLink;
+            finalTx.driveFileId = result.fileId;
+        } catch (error) {
+            console.error("Upload failed", error);
+            alert("Không thể tải ảnh lên Drive. Giao dịch sẽ được lưu mà không có link ảnh.");
+        }
+        setIsSyncing(false);
+    } else if (file && !isDriveConnected && !finalTx.receiptUrl) {
+         // Fallback to blob if not connected (handled in uploader, but ensuring logic)
+         // Note: Blob URLs expire, so this is temporary for session
+    }
+
+    let newTransactions;
+    setTransactions(prev => {
+      const exists = prev.find(t => t.id === finalTx.id);
+      if (exists) {
+        newTransactions = prev.map(t => t.id === finalTx.id ? finalTx : t);
+      } else {
+        newTransactions = [finalTx, ...prev];
+      }
+      // Trigger sync with new data
+      saveToDrive(newTransactions, budgets);
+      return newTransactions;
     });
+
     setShowUploaderModal(false);
     setEditingTransaction(null);
   };
@@ -106,12 +192,16 @@ const App: React.FC = () => {
   };
 
   const handleUpdateBudget = (category: string, amount: number) => {
-    setBudgets(prev => prev.map(b => b.category === category ? { ...b, amount } : b));
+    const newBudgets = budgets.map(b => b.category === category ? { ...b, amount } : b);
+    setBudgets(newBudgets);
+    saveToDrive(transactions, newBudgets);
   };
 
   const handleAddCategory = () => {
     if (newCategoryName && newCategoryAmount) {
-       setBudgets(prev => [...prev, { category: newCategoryName, amount: Number(newCategoryAmount) }]);
+       const newBudgets = [...budgets, { category: newCategoryName, amount: Number(newCategoryAmount) }];
+       setBudgets(newBudgets);
+       saveToDrive(transactions, newBudgets);
        setNewCategoryName('');
        setNewCategoryAmount('');
     }
@@ -131,6 +221,17 @@ const App: React.FC = () => {
      setPasswordInput('');
      setAuthError(false);
      setShowBudgetModal(true);
+  };
+
+  const saveSettings = () => {
+      localStorage.setItem('google_client_id', googleClientId);
+      localStorage.setItem('google_api_key', googleApiKey);
+      driveService.initGoogleDrive(googleClientId, googleApiKey, (success) => {
+          setIsDriveReady(success);
+          if (success) alert("Cấu hình Google thành công. Hãy nhấn nút 'Kết nối Drive'.");
+          else alert("Cấu hình không hợp lệ.");
+      });
+      setShowProjectModal(false);
   };
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
@@ -175,6 +276,26 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex gap-2">
+                 {/* Google Drive Status Button */}
+                 <button
+                    onClick={handleConnectDrive}
+                    disabled={isSyncing}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border ${
+                        isDriveConnected 
+                        ? 'bg-green-50 text-green-700 border-green-200' 
+                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                    }`}
+                 >
+                    {isSyncing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : isDriveConnected ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                    ) : (
+                        <Cloud className="w-4 h-4" />
+                    )}
+                    {isDriveConnected ? 'Đã kết nối Drive' : 'Kết nối Drive'}
+                 </button>
+
                  <button 
                    onClick={() => setShowProjectModal(true)}
                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors border border-slate-300"
@@ -254,7 +375,7 @@ const App: React.FC = () => {
       {/* Project Settings Modal */}
       {showProjectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                <div className="p-4 border-b flex justify-between items-center bg-slate-50">
                   <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
                      <Settings className="w-5 h-5 text-slate-600" />
@@ -262,16 +383,47 @@ const App: React.FC = () => {
                   </h3>
                   <button onClick={() => setShowProjectModal(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
                </div>
-               <div className="p-6">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Tên dự án / Công trình</label>
-                  <input 
-                    type="text" 
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="VD: Mingfai Ph2 factory"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <div className="flex justify-end gap-2">
+               <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Tên dự án / Công trình</label>
+                    <input 
+                        type="text" 
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        placeholder="VD: Mingfai Ph2 factory"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  <div className="pt-4 border-t border-slate-100">
+                      <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
+                          <Cloud className="w-4 h-4 text-blue-600" />
+                          Cấu hình Google Drive
+                      </h4>
+                      <p className="text-xs text-slate-500 mb-3">
+                          Để lưu ảnh và dữ liệu vào Drive cá nhân, bạn cần nhập Client ID và API Key từ Google Cloud Console.
+                      </p>
+                      
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Google Client ID</label>
+                      <input 
+                        type="text" 
+                        value={googleClientId}
+                        onChange={(e) => setGoogleClientId(e.target.value)}
+                        placeholder="apps.googleusercontent.com"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg mb-2 focus:ring-blue-500"
+                      />
+
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Google API Key</label>
+                      <input 
+                        type="password" 
+                        value={googleApiKey}
+                        onChange={(e) => setGoogleApiKey(e.target.value)}
+                        placeholder="AIzaSy..."
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg mb-2 focus:ring-blue-500"
+                      />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
                      <button 
                         onClick={() => setShowProjectModal(false)}
                         className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
@@ -279,10 +431,10 @@ const App: React.FC = () => {
                         Hủy
                      </button>
                      <button 
-                        onClick={() => setShowProjectModal(false)}
+                        onClick={saveSettings}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
                      >
-                        <Save className="w-4 h-4" /> Lưu
+                        <Save className="w-4 h-4" /> Lưu Cấu Hình
                      </button>
                   </div>
                </div>

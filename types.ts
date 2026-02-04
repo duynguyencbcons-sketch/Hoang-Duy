@@ -13,6 +13,7 @@ export interface Transaction {
   currency: string;
   description: string; // Mục đích sử dụng
   receiptUrl?: string;
+  driveFileId?: string; // ID of the image on Google Drive
 }
 
 export interface Budget {
@@ -33,3 +34,11 @@ export interface ChatMessage {
 }
 
 export type ImageResolution = '1K' | '2K' | '4K';
+
+// Google API Types shim
+declare global {
+  interface Window {
+    gapi: any;
+    google: any;
+  }
+}

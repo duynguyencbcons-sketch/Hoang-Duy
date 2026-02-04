@@ -1,15 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Safely retrieve API key to avoid "process is not defined" crash in browser
-const getApiKey = () => {
-  try {
-    return (typeof process !== 'undefined' && process.env && process.env.API_KEY) || '';
-  } catch (e) {
-    return '';
-  }
-};
-
-const apiKey = getApiKey();
+const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
 export const fileToGenerativePart = async (file: File): Promise<string> => {

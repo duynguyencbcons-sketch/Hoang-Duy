@@ -3,7 +3,7 @@ import { Send, Upload, Calendar, DollarSign, FileText, Tag, Image as ImageIcon, 
 import { Transaction, TransactionType, ConstructionCategory, Budget } from '../types';
 
 interface Props {
-  onTransactionAdded: (tx: Transaction) => void;
+  onTransactionAdded: (tx: Transaction, file?: File | null) => void;
   budgets: Budget[]; // Passed to generate dropdown options
   initialData?: Transaction | null; // For editing
 }
@@ -83,7 +83,7 @@ const ReceiptUploader: React.FC<Props> = ({ onTransactionAdded, budgets, initial
       receiptUrl: previewUrl || undefined
     };
 
-    onTransactionAdded(newTransaction);
+    onTransactionAdded(newTransaction, selectedFile);
 
     if (!initialData) {
        // Reset Form only if adding new

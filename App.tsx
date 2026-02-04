@@ -89,7 +89,16 @@ const App: React.FC = () => {
     if (savedClientId && savedApiKey) {
         driveService.initGoogleDrive(savedClientId, savedApiKey, (success, error) => {
             setIsDriveReady(success);
-            if (!success && error) console.warn(error);
+            if (success) {
+                // Auto Connect Attempt
+                const autoConnected = driveService.tryAutoConnect();
+                if (autoConnected) {
+                    setIsDriveConnected(true);
+                    handleSyncFromDrive();
+                }
+            } else if (error) {
+                console.warn(error);
+            }
         });
     }
   }, []);

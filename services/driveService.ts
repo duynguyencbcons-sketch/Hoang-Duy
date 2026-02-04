@@ -3,6 +3,8 @@
 const FOLDER_NAME = 'QLCP';
 const DATA_FILE_NAME = 'finance_data.json';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const TOKEN_STORAGE_KEY = 'google_access_token';
+const EXPIRY_STORAGE_KEY = 'google_token_expiry';
 
 let tokenClient: any;
 let gapiInited = false;
@@ -57,6 +59,12 @@ export const initGoogleDrive = (clientId: string, apiKey: string, onInitComplete
              return;
           }
           accessToken = tokenResponse.access_token;
+          
+          // Save token to localStorage for auto-connect logic
+          const expiresIn = (tokenResponse.expires_in || 3599) * 1000; // Convert seconds to ms
+          const expiryTime = Date.now() + expiresIn;
+          localStorage.setItem(TOKEN_STORAGE_KEY, accessToken || '');
+          localStorage.setItem(EXPIRY_STORAGE_KEY, expiryTime.toString());
         },
       });
       gisInited = true;
@@ -80,6 +88,28 @@ export const initGoogleDrive = (clientId: string, apiKey: string, onInitComplete
   else onInitComplete(false, "Không thể tải thư viện Google Identity");
 };
 
+export const tryAutoConnect = (): boolean => {
+    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const storedExpiry = localStorage.getItem(EXPIRY_STORAGE_KEY);
+
+    if (storedToken && storedExpiry) {
+        const now = Date.now();
+        // Check if token is still valid (give a 1-minute buffer)
+        if (now < parseInt(storedExpiry) - 60000) {
+            accessToken = storedToken;
+            // Restore token to gapi client if it's initialized
+            if (window.gapi && window.gapi.client) {
+                window.gapi.client.setToken({ access_token: storedToken });
+            }
+            return true;
+        } else {
+            // Token expired, clear it
+            handleSignOutClick(); 
+        }
+    }
+    return false;
+};
+
 export const handleAuthClick = () => {
   return new Promise<boolean>((resolve, reject) => {
     if (!tokenClient) {
@@ -94,6 +124,13 @@ export const handleAuthClick = () => {
         reject(resp);
       }
       accessToken = resp.access_token;
+      
+      // Save token to localStorage
+      const expiresIn = (resp.expires_in || 3599) * 1000; 
+      const expiryTime = Date.now() + expiresIn;
+      localStorage.setItem(TOKEN_STORAGE_KEY, accessToken || '');
+      localStorage.setItem(EXPIRY_STORAGE_KEY, expiryTime.toString());
+
       resolve(true);
     };
 
@@ -112,6 +149,9 @@ export const handleSignOutClick = () => {
     window.gapi.client.setToken('');
     accessToken = null;
   }
+  // Clear storage
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(EXPIRY_STORAGE_KEY);
 };
 
 // Find or Create the Data Folder
